@@ -1,4 +1,4 @@
-# Github_Actions
+# Github_Actions_Pipeline
 This is custom CI/CD pipeline script I wrote that validates/deploys to a Salesforce sandbox.
 
 It validates upon pull_request, and deploys upon merge/commit to master

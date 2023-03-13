@@ -1,0 +1,96 @@
+# This is a workflow to accomplish the following:
+#. Validate tin Salesforce Sandbox when a pull request is created (or a commit is made to the pull request's branch)
+#. Deploy to Salesforce Sandbox when merging/committing to master
+
+name: CI (abccompany-salesforce validate/deploy pipleline)
+
+# Controls when the action will run. Triggers the workflow on pull_request or merge/commit to master
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "force-app/**"
+  push:
+    branches: [master]
+    paths:
+      - "force-app/**"
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        name: Checkout repo
+        with:
+          fetch-depth: 0
+
+      # Setup Node
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "16"
+
+      # Install SFDX CLI
+      - name: Install SFDX CLI
+        run: |
+          npm install sfdx-cli -g
+          sfdx update
+
+      # Install SFDX Git Delta
+      - name: Install sfdx Git delta
+        run: |
+          echo y | sfdx plugins:install sfdx-git-delta
+          sfdx sgd:source:delta --to "HEAD" --from "HEAD^" --ignore ./.gitignore --output "."
+
+      # Authorize SF Org
+      - name: Authorize SF Org
+        env:
+          USERNAME: ${{ secrets.SANDBOX_USERNAME }}
+          INSTANCE_URL: ${{ secrets.SANDBOX_INSTANCE_URL }}
+          CLIENT_ID: ${{ secrets.SANDBOX_CLIENTID }}
+        run: sfdx force:auth:jwt:grant --clientid $CLIENT_ID --jwtkeyfile ./buildfiles/server.key --username $USERNAME --instanceurl $INSTANCE_URL
+
+      # Convert metadata
+      - name: Convert Metadata
+        run: |
+          sfdx force:source:convert -d ./src -x ./package/package.xml
+
+      # Validate in Salesforce Sandbox (upon pull_request)
+      - name: Validate in Salesforce Sandbox (if Pull Request)
+        if: github.event_name == 'pull_request'
+        run: |
+          sfdx force:mdapi:deploy --checkonly -l RunLocalTests -d ./src -u ${{ secrets.SANDBOX_USERNAME }} -w 10
+
+      # Deploy to Salesforce Sandbox (upon merge/commit to master)
+      - name: Deploy to Salesforce Sandbox (if merge/commit to Master)
+        if: github.event_name == 'push'
+        run: |
+          sfdx force:mdapi:deploy -l RunLocalTests -d ./src -u ${{ secrets.SANDBOX_USERNAME }} -w 10
+
+      # If pull request, notify a slack channel using rtcamp's slack github actions
+      - name: Slack Notification for new Pull Request (if pull_request)
+        if: github.event_name == 'pull_request'
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
+          SLACK_MESSAGE: "GitHub build result: ${{ job.status }}\nPR: <${{ github.event.pull_request.html_url || github.event.head_commit.url }}|${{ github.event.pull_request.title }}>"
+          SLACK_TITLE: Pull Request created on abccompany-salesforce repo
+          SLACK_USERNAME: ${{ github.actor }}
+          SLACK_WEBHOOK: ${{ secrets.MY_SLACK_CHANNEL_WEBHOOK }}
+
+      # If merge to master, notify a slack channel using rtcamp's slack github actions
+      - name: Slack Notification for successful deployment (if merge/commit to master)
+        if: github.event_name == 'push'
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
+          SLACK_MESSAGE: "GitHub build result: ${{ job.status }}\nPR: <${{ github.event.pull_request.html_url || github.event.head_commit.url }}|${{ github.event.pull_request.title }}>"
+          SLACK_TITLE: Pull Request merged to master on abccompany-salesforce repo
+          SLACK_USERNAME: ${{ github.actor }}
+          SLACK_WEBHOOK: ${{ secrets.MY_SLACK_CHANNEL2_WEBHOOK }}

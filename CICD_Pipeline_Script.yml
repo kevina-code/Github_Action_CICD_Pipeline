@@ -5,6 +5,7 @@
 name: CI (abccompany-salesforce validate/deploy pipleline)
 
 # Controls when the action will run. Triggers the workflow on pull_request or merge/commit to master
+# Validates on pull request; Validates & Deploys upon merge/commit to master
 on:
   pull_request:
     branches: [master]

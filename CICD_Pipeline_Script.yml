@@ -31,19 +31,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Setup Node
+      # Setup Node in virtual environment
       - name: Setup Node
         uses: actions/setup-node@v1
         with:
           node-version: "16"
 
-      # Install SFDX CLI
+      # Install SFDX CLI in virtual environment
       - name: Install SFDX CLI
         run: |
           npm install sfdx-cli -g
           sfdx update
 
-      # Install SFDX Git Delta
+      # Install SFDX Git Delta in virtual environment
       - name: Install sfdx Git delta
         run: |
           echo y | sfdx plugins:install sfdx-git-delta
@@ -74,24 +74,25 @@ jobs:
         run: |
           sfdx force:mdapi:deploy -l RunLocalTests -d ./src -u ${{ secrets.SANDBOX_USERNAME }} -w 10
 
+      # SLACK NOTIFICATION SECTION COMMENTED OUT. DECOMMENT IF YOU WANT TO USE IT
       # If pull request, notify a slack channel using rtcamp's slack github actions
-      - name: Slack Notification for new Pull Request (if pull_request)
-        if: github.event_name == 'pull_request'
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
-          SLACK_MESSAGE: "GitHub build result: ${{ job.status }}\nPR: <${{ github.event.pull_request.html_url || github.event.head_commit.url }}|${{ github.event.pull_request.title }}>"
-          SLACK_TITLE: Pull Request created on abccompany-salesforce repo
-          SLACK_USERNAME: ${{ github.actor }}
-          SLACK_WEBHOOK: ${{ secrets.MY_SLACK_CHANNEL_WEBHOOK }}
+      # - name: Slack Notification for new Pull Request (if pull_request)
+        # if: github.event_name == 'pull_request'
+        # uses: rtCamp/action-slack-notify@v2
+        # env:
+          # SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
+          # SLACK_MESSAGE: "GitHub build result: ${{ job.status }}\nPR: <${{ github.event.pull_request.html_url || github.event.head_commit.url }}|${{ github.event.pull_request.title }}>"
+          # SLACK_TITLE: Pull Request created on abccompany-salesforce repo
+          # SLACK_USERNAME: ${{ github.actor }}
+          # SLACK_WEBHOOK: ${{ secrets.MY_SLACK_CHANNEL_WEBHOOK }}
 
       # If merge to master, notify a slack channel using rtcamp's slack github actions
-      - name: Slack Notification for successful deployment (if merge/commit to master)
-        if: github.event_name == 'push'
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
-          SLACK_MESSAGE: "GitHub build result: ${{ job.status }}\nPR: <${{ github.event.pull_request.html_url || github.event.head_commit.url }}|${{ github.event.pull_request.title }}>"
-          SLACK_TITLE: Pull Request merged to master on abccompany-salesforce repo
-          SLACK_USERNAME: ${{ github.actor }}
-          SLACK_WEBHOOK: ${{ secrets.MY_SLACK_CHANNEL2_WEBHOOK }}
+      # - name: Slack Notification for successful deployment (if merge/commit to master)
+        # if: github.event_name == 'push'
+        # uses: rtCamp/action-slack-notify@v2
+        # env:
+          # SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
+          # SLACK_MESSAGE: "GitHub build result: ${{ job.status }}\nPR: <${{ github.event.pull_request.html_url || github.event.head_commit.url }}|${{ github.event.pull_request.title }}>"
+          # SLACK_TITLE: Pull Request merged to master on abccompany-salesforce repo
+          # SLACK_USERNAME: ${{ github.actor }}
+          # SLACK_WEBHOOK: ${{ secrets.MY_SLACK_CHANNEL2_WEBHOOK }}
